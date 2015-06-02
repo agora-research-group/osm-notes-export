@@ -1,0 +1,15 @@
+{
+  "name": "osm-notes-export",
+  "version": "0.0.0",
+  "description": "ferramenta para exportar notas de OpenStreetMap baseada em tempo e espaço",
+  "main": "app/index.js",
+  "scripts": {
+    "start": "standard && node ./app/index.js"
+  },
+  "author": {
+    "name": "Thiago Henrique Poiani",
+    "email": "thpoiani@usp.br",
+    "url": "https://thpoiani.com.br"
+  },
+  "license": "MIT"
+}
