@@ -55,8 +55,13 @@ if (path.extname(argv.file) !== '.osn') {
 
 openOSN(argv.file, function (content) {
   parseOSN2JSON(content, function (notes) {
-    var result = filterNotes(notes)
-    console.log(result)
+    var result = filterNotes(notes),
+      content = JSON.stringify(result)
+
+    fs.writeFile('output.json', content, function () {
+      console.log(colors.green('✓ File ' + colors.bold('output.json') + ' generated'))
+      process.exit(0)
+    })
   })
 })
 
@@ -104,11 +109,11 @@ function parseOSN2JSON (osn, callback) {
 
 /**
  * Filter Notes
- * @param  {object} notes
+ * @param  {object} data
  * @return {void}
  */
-function filterNotes (notes) {
-  var notes = notes['osm-notes']['note'] || []
+function filterNotes (data) {
+  var notes = data['osm-notes']['note'] || []
 
   if (!notes.length) {
     console.log(colors.yellow('✗ Empty notes collection'))
@@ -196,8 +201,6 @@ function filterByBoundingBox (notes) {
       latMax = parseFloat(bbox[3]),
       lat = parseFloat(note.$.lat),
       lon = parseFloat(note.$.lon)
-
-    console.log([lonMin, latMin, lonMax, lonMin, lat, lon])
 
     var innerLatitude = lat >= latMin && lat <= latMax,
       innerLongitude = lon >= lonMin && lon <= lonMax
