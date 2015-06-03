@@ -18,11 +18,11 @@ options[FILE] = {
 }
 
 options[INITIAL_CREATION_TIMESTAMP] = {
-  describe: 'Filter notes by creation date (YYYY-MM-DD)'
+  describe: 'Filter notes by initial creation date (YYYY-MM-DD)'
 }
 
 options[FINAL_CREATION_TIMESTAMP] = {
-  describe: 'Filter notes by creation, modification or closing date'
+  describe: 'Filter notes by final creation date (YYYY-MM-DD'
 }
 
 var argv = require('yargs')
@@ -108,7 +108,8 @@ function filterNotes (notes) {
     process.exit(0)
   }
 
-  notes = filterByInitialTimestamp(notes)
+  notes = filterByInitialCreationTimestamp(notes)
+  notes = filterByFinalCreationTimestamp(notes)
 
   console.log(notes)
 }
@@ -118,26 +119,47 @@ function filterNotes (notes) {
  * @param  {object} notes
  * @return {void}
  */
-function filterByInitialTimestamp (notes) {
+function filterByInitialCreationTimestamp (notes) {
   if (!argv[INITIAL_CREATION_TIMESTAMP]) {
-    console.error(colors.red('✗ ' + colors.bold('Initial Creation Timestamp') + ' is not specified'))
-    process.exit(1)
+    return notes
   }
 
-  var initialCreationTimestamp = new Date(argv[INITIAL_CREATION_TIMESTAMP]),
-    result = []
+  var date = new Date(argv[INITIAL_CREATION_TIMESTAMP])
 
-  if (isNaN(initialCreationTimestamp.getTime())) {
+  if (isNaN(date.getTime())) {
     console.error(colors.red('✗ ' + colors.bold('Initial Creation Timestamp') + ' invalid'))
     process.exit(1)
   }
 
-  function filterByInitialCreationTimestamp (note) {
+  function filter (note) {
     var createdAt = new Date(note.$.created_at)
-    return createdAt.getTime() >= initialCreationTimestamp.getTime()
+    return createdAt.getTime() >= date.getTime()
   }
 
-  result = _.filter(notes, filterByInitialCreationTimestamp)
+  return _.filter(notes, filter)
+}
 
-  return result
+/**
+ * Filter Notes by argument FINAL_CREATION_TIMESTAMP
+ * @param  {object} notes
+ * @return {void}
+ */
+function filterByFinalCreationTimestamp (notes) {
+  if (!argv[FINAL_CREATION_TIMESTAMP]) {
+    return notes
+  }
+
+  var date = new Date(argv[FINAL_CREATION_TIMESTAMP])
+
+  if (isNaN(date.getTime())) {
+    console.error(colors.red('✗ ' + colors.bold('Final Creation Timestamp') + ' invalid'))
+    process.exit(1)
+  }
+
+  function filter (note) {
+    var createdAt = new Date(note.$.created_at)
+    return createdAt.getTime() < date.getTime()
+  }
+
+  return _.filter(notes, filter)
 }
