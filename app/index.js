@@ -1,25 +1,40 @@
 'use strict'
 
+// Constants
+var FILE = 'file',
+  INITIAL_CREATION_TIMESTAMP = 'initial-creation-timestamp',
+  FINAL_CREATION_TIMESTAMP = 'final-creation-timestamp'
+
+// Arguments
+var options = {},
+  usage = 'npm start ' +
+    '--' + FILE + ' <planet-notes-latest.osn> ' +
+    '[--' + INITIAL_CREATION_TIMESTAMP + ' <2015-04-10>] ' +
+    '[--' + FINAL_CREATION_TIMESTAMP + ' <2015-05-25>]'
+
+options[FILE] = {
+  describe: 'Open an OpenStreetMap Notes file',
+  require: true
+}
+
+options[INITIAL_CREATION_TIMESTAMP] = {
+  describe: 'Filter notes by creation date (YYYY-MM-DD)'
+}
+
+options[FINAL_CREATION_TIMESTAMP] = {
+  describe: 'Filter notes by creation, modification or closing date'
+}
+
 var argv = require('yargs')
-  .usage('npm start --file <planet-notes-latest.osn> [--initial-creation-timestamp <2015-04-10>] [--final-timestamp <2015-05-25>]')
-  .option({
-    'file': {
-      alias: 'f',
-      describe: 'Open an OpenStreetMap Notes file',
-      require: true
-    },
-    'initial-creation-timestamp': {
-      describe: 'Filter notes by creation date (YYYY-MM-DD)'
-    },
-    'final-timestamp': {
-      describe: 'Filter notes by creation, modification or closing date'
-    }
-  })
+  .usage(usage)
+  .option(options)
   .version(function () {
     return require('../package.json').version
   })
   .help('help')
   .argv
+
+// Imports
 
 var path = require('path')
 var fs = require('fs')
@@ -38,6 +53,12 @@ openOSN(argv.file, function (content) {
   })
 })
 
+/**
+ * Read OpenStreetMap Notes file
+ * @param  {string}   file
+ * @param  {Function} callback
+ * @return {void}
+ */
 function openOSN (file, callback) {
   fs.readFile(file, function (err, content) {
     if (err) {
@@ -51,6 +72,12 @@ function openOSN (file, callback) {
   })
 }
 
+/**
+ * Parse OpenStreetMap XML to JSON
+ * @param  {object}   osn
+ * @param  {Function} callback
+ * @return {void}
+ */
 function parseOSN2JSON (osn, callback) {
   var parser = new xml2js.Parser()
 
@@ -68,6 +95,11 @@ function parseOSN2JSON (osn, callback) {
   })
 }
 
+/**
+ * Filter Notes
+ * @param  {object} notes
+ * @return {void}
+ */
 function filterNotes (notes) {
   var notes = notes['osm-notes']['note'] || []
 
@@ -76,30 +108,36 @@ function filterNotes (notes) {
     process.exit(0)
   }
 
-  notes = filterByCreationDate(notes)
+  notes = filterByInitialTimestamp(notes)
 
   console.log(notes)
 }
 
-function filterByCreationDate (notes) {
-  if (!argv['initial-creation-timestamp']) {
+/**
+ * Filter Notes by argument INITIAL_CREATION_TIMESTAMP
+ * @param  {object} notes
+ * @return {void}
+ */
+function filterByInitialTimestamp (notes) {
+  if (!argv[INITIAL_CREATION_TIMESTAMP]) {
     console.error(colors.red('✗ ' + colors.bold('Initial Creation Timestamp') + ' is not specified'))
     process.exit(1)
   }
 
-  var initialCreationTimestamp = new Date(argv['initial-creation-timestamp']),
-    result
+  var initialCreationTimestamp = new Date(argv[INITIAL_CREATION_TIMESTAMP]),
+    result = []
 
   if (isNaN(initialCreationTimestamp.getTime())) {
     console.error(colors.red('✗ ' + colors.bold('Initial Creation Timestamp') + ' invalid'))
     process.exit(1)
   }
 
-  result = _.filter(notes, function (note) {
+  function filterByInitialCreationTimestamp (note) {
     var createdAt = new Date(note.$.created_at)
+    return createdAt.getTime() >= initialCreationTimestamp.getTime()
+  }
 
-    return createdAt.getTime() >= initialCreationTimestamp
-  })
+  result = _.filter(notes, filterByInitialCreationTimestamp)
 
   return result
 }
