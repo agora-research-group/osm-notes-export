@@ -3,14 +3,16 @@
 // Constants
 var FILE = 'file',
   INITIAL_CREATION_TIMESTAMP = 'initial-creation-timestamp',
-  FINAL_CREATION_TIMESTAMP = 'final-creation-timestamp'
+  FINAL_CREATION_TIMESTAMP = 'final-creation-timestamp',
+  BOUNDING_BOX = 'bounding-box'
 
 // Arguments
 var options = {},
   usage = 'npm start ' +
     '--' + FILE + ' <planet-notes-latest.osn> ' +
-    '[--' + INITIAL_CREATION_TIMESTAMP + ' <2015-04-10>] ' +
-    '[--' + FINAL_CREATION_TIMESTAMP + ' <2015-05-25>]'
+    '[--' + INITIAL_CREATION_TIMESTAMP + ' <YYYY-MM-DD>] ' +
+    '[--' + FINAL_CREATION_TIMESTAMP + ' <YYYY-MM-DD>]' +
+    '[--' + BOUNDING_BOX + ' <lon_min,lat_min,lon_max,lat_max>]'
 
 options[FILE] = {
   describe: 'Open an OpenStreetMap Notes file',
@@ -18,11 +20,15 @@ options[FILE] = {
 }
 
 options[INITIAL_CREATION_TIMESTAMP] = {
-  describe: 'Filter notes by initial creation date (YYYY-MM-DD)'
+  describe: 'Filter notes by initial creation date'
 }
 
 options[FINAL_CREATION_TIMESTAMP] = {
-  describe: 'Filter notes by final creation date (YYYY-MM-DD'
+  describe: 'Filter notes by final creation date'
+}
+
+options[BOUNDING_BOX] = {
+  describe: 'Filter notes by bounding box'
 }
 
 var argv = require('yargs')
@@ -49,7 +55,8 @@ if (path.extname(argv.file) !== '.osn') {
 
 openOSN(argv.file, function (content) {
   parseOSN2JSON(content, function (notes) {
-    filterNotes(notes)
+    var result = filterNotes(notes)
+    console.log(result)
   })
 })
 
@@ -110,8 +117,9 @@ function filterNotes (notes) {
 
   notes = filterByInitialCreationTimestamp(notes)
   notes = filterByFinalCreationTimestamp(notes)
+  notes = filterByBoundingBox(notes)
 
-  console.log(notes)
+  return notes
 }
 
 /**
@@ -159,6 +167,42 @@ function filterByFinalCreationTimestamp (notes) {
   function filter (note) {
     var createdAt = new Date(note.$.created_at)
     return createdAt.getTime() < date.getTime()
+  }
+
+  return _.filter(notes, filter)
+}
+
+/**
+ * Filter Notes by argument BOUNDING_BOX
+ * @param  {object} notes
+ * @return {void}
+ */
+function filterByBoundingBox (notes) {
+  if (!argv[BOUNDING_BOX]) {
+    return notes
+  }
+
+  var bbox = argv[BOUNDING_BOX].split(',')
+
+  if (bbox.length !== 4) {
+    console.error(colors.red('✗ ' + colors.bold('Bounding Box') + ' invalid'))
+    process.exit(1)
+  }
+
+  function filter (note) {
+    var lonMin = parseFloat(bbox[0]),
+      latMin = parseFloat(bbox[1]),
+      lonMax = parseFloat(bbox[2]),
+      latMax = parseFloat(bbox[3]),
+      lat = parseFloat(note.$.lat),
+      lon = parseFloat(note.$.lon)
+
+    console.log([lonMin, latMin, lonMax, lonMin, lat, lon])
+
+    var innerLatitude = lat >= latMin && lat <= latMax,
+      innerLongitude = lon >= lonMin && lon <= lonMax
+
+    return innerLatitude && innerLongitude
   }
 
   return _.filter(notes, filter)
